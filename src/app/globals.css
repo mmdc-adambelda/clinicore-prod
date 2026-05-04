@@ -1,0 +1,24 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  * { box-sizing: border-box; }
+  html { scroll-behavior: smooth; }
+  body { @apply bg-slate-50 text-slate-900; }
+  ::-webkit-scrollbar { width: 6px; height: 6px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { @apply bg-slate-300 rounded-full; }
+  ::-webkit-scrollbar-thumb:hover { @apply bg-slate-400; }
+}
+
+@layer components {
+  .badge { @apply inline-flex items-center gap-1 text-xs font-semibold px-2 py-0.5 rounded-full; }
+}
+
+@layer utilities {
+  .border-dashed-x { border-left-style: dashed; border-right-style: dashed; }
+}
+
+/* Inter loaded at runtime via Vercel CDN */
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
