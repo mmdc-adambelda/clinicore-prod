@@ -1,10 +1,10 @@
 'use client'
-import { useState } from 'react'
+import { useState, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import toast from 'react-hot-toast'
 import { cn } from '@/lib/utils'
-import { Plus, Package, Pencil } from 'lucide-react'
+import { Plus, Package, Pencil, Upload, Download } from 'lucide-react'
 
 const STATUS_STYLE: Record<string, string> = {
   ok:           'bg-emerald-100 text-emerald-700',
@@ -16,8 +16,48 @@ const STATUS_STYLE: Record<string, string> = {
 const CATEGORIES = [
   'Restorative','Endodontic','Surgical','Preventive',
   'Orthodontic','Prosthetic','Anesthesia','Sterilization',
-  'Veterinary','Office Supplies','Equipment','Other',
+  'Office Supplies','Equipment','Other',
 ]
+
+const UNITS = ['piece','box','vial','tube','bottle','pack','set','roll','bag','syringe']
+
+const INV_CSV_HEADERS = ['name','category','unit','stock_quantity','reorder_level','unit_cost','supplier','notes']
+const INV_CSV_TEMPLATE = [
+  INV_CSV_HEADERS.join(','),
+  'Composite Resin A2,Restorative,tube,10,3,450.00,Dental Supply Co.,Keep refrigerated',
+  'Dental Anesthetic 2%,Anesthesia,vial,20,5,85.00,PhilDenta,Check expiry date',
+  'Latex Gloves (M),Surgical,box,15,5,320.00,MedLine PH,',
+].join('\n')
+
+function parseCSVLine(line: string): string[] {
+  const result: string[] = []
+  let current = ''
+  let inQuotes = false
+  for (let i = 0; i < line.length; i++) {
+    if (line[i] === '"') {
+      if (inQuotes && line[i + 1] === '"') { current += '"'; i++ }
+      else inQuotes = !inQuotes
+    } else if (line[i] === ',' && !inQuotes) {
+      result.push(current); current = ''
+    } else {
+      current += line[i]
+    }
+  }
+  result.push(current)
+  return result
+}
+
+function parseCSV(text: string): Record<string, string>[] {
+  const lines = text.trim().split(/\r?\n/)
+  if (lines.length < 2) return []
+  const headers = parseCSVLine(lines[0]).map(h => h.trim().replace(/^"|"$/g, '').toLowerCase())
+  return lines.slice(1).filter(l => l.trim()).map(line => {
+    const values = parseCSVLine(line)
+    const row: Record<string, string> = {}
+    headers.forEach((h, i) => { row[h] = (values[i] || '').trim().replace(/^"|"$/g, '') })
+    return row
+  })
+}
 
 export default function InventoryView({ items }: { items: any[] }) {
   const router = useRouter()
@@ -144,6 +184,32 @@ export default function InventoryView({ items }: { items: any[] }) {
 }
 
 function AddItemModal({ onClose, onSave }: { onClose: ()=>void; onSave: ()=>void }) {
+  const [tab, setTab] = useState<'single' | 'bulk'>('single')
+
+  return (
+    <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4 overflow-y-auto" onClick={e => e.target===e.currentTarget && onClose()}>
+      <div className="bg-white rounded-2xl p-6 w-full max-w-lg shadow-2xl my-4">
+        <div className="flex items-center justify-between mb-5">
+          <h2 className="text-lg font-bold">Add Inventory Item</h2>
+          <button onClick={onClose} className="text-slate-400 hover:text-slate-600 text-xl">✕</button>
+        </div>
+
+        <div className="flex gap-1 bg-slate-100 rounded-lg p-1 mb-5">
+          <button onClick={() => setTab('single')} className={cn('flex-1 py-2 rounded-md text-sm font-semibold transition-all', tab === 'single' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-500 hover:text-slate-700')}>
+            Single Item
+          </button>
+          <button onClick={() => setTab('bulk')} className={cn('flex-1 py-2 rounded-md text-sm font-semibold transition-all flex items-center justify-center gap-1.5', tab === 'bulk' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-500 hover:text-slate-700')}>
+            <Upload size={13}/> Bulk Upload
+          </button>
+        </div>
+
+        {tab === 'single' ? <SingleItemForm onClose={onClose} onSave={onSave} /> : <BulkInventoryUpload onClose={onClose} onSave={onSave} />}
+      </div>
+    </div>
+  )
+}
+
+function SingleItemForm({ onClose, onSave }: { onClose: ()=>void; onSave: ()=>void }) {
   const [loading, setLoading] = useState(false)
   const [f, setF] = useState({ name:'', category:'Restorative', unit:'piece', stock_quantity:'0', reorder_level:'5', unit_cost:'', supplier:'', notes:'' })
   const s = (k:string) => (e: React.ChangeEvent<HTMLInputElement|HTMLSelectElement|HTMLTextAreaElement>) => setF(p => ({...p,[k]:e.target.value}))
@@ -171,45 +237,182 @@ function AddItemModal({ onClose, onSave }: { onClose: ()=>void; onSave: ()=>void
   }
 
   return (
-    <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4" onClick={e => e.target===e.currentTarget && onClose()}>
-      <div className="bg-white rounded-2xl p-6 w-full max-w-lg shadow-2xl">
-        <div className="flex items-center justify-between mb-5">
-          <h2 className="text-lg font-bold">Add Inventory Item</h2>
-          <button onClick={onClose} className="text-slate-400 hover:text-slate-600 text-xl">✕</button>
+    <div className="space-y-3">
+      <F label="Item Name *" value={f.name} onChange={s('name')} placeholder="e.g. Composite Resin A2, Dental Anesthetic 2%"/>
+      <div className="grid grid-cols-2 gap-3">
+        <div><label className="block text-xs font-semibold text-slate-600 mb-1">Category *</label>
+          <select value={f.category} onChange={s('category')} className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm outline-none focus:border-blue-400">
+            {CATEGORIES.map(c => <option key={c}>{c}</option>)}
+          </select>
         </div>
-        <div className="space-y-3">
-          <F label="Item Name *" value={f.name} onChange={s('name')} placeholder="e.g. Composite Resin A2, Dental Anesthetic 2%"/>
-          <div className="grid grid-cols-2 gap-3">
-            <div><label className="block text-xs font-semibold text-slate-600 mb-1">Category *</label>
-              <select value={f.category} onChange={s('category')} className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm outline-none focus:border-blue-400">
-                {CATEGORIES.map(c => <option key={c}>{c}</option>)}
-              </select>
-            </div>
-            <div><label className="block text-xs font-semibold text-slate-600 mb-1">Unit</label>
-              <select value={f.unit} onChange={s('unit')} className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm outline-none focus:border-blue-400">
-                {['piece','box','vial','tube','bottle','pack','set','roll','bag','syringe'].map(u => <option key={u}>{u}</option>)}
-              </select>
-            </div>
+        <div><label className="block text-xs font-semibold text-slate-600 mb-1">Unit</label>
+          <select value={f.unit} onChange={s('unit')} className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm outline-none focus:border-blue-400">
+            {UNITS.map(u => <option key={u}>{u}</option>)}
+          </select>
+        </div>
+      </div>
+      <div className="grid grid-cols-2 gap-3">
+        <F label="Current Stock *" type="number" value={f.stock_quantity} onChange={s('stock_quantity')} placeholder="0"/>
+        <F label="Reorder Alert Level *" type="number" value={f.reorder_level} onChange={s('reorder_level')} placeholder="5"/>
+      </div>
+      <div className="grid grid-cols-2 gap-3">
+        <F label="Unit Cost (₱)" type="number" value={f.unit_cost} onChange={s('unit_cost')} placeholder="0.00"/>
+        <F label="Supplier" value={f.supplier} onChange={s('supplier')} placeholder="Supplier name"/>
+      </div>
+      <div><label className="block text-xs font-semibold text-slate-600 mb-1">Notes</label>
+        <textarea value={f.notes} onChange={s('notes')} rows={2} placeholder="Storage instructions, expiry…"
+          className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm outline-none focus:border-blue-400 resize-none"/>
+      </div>
+      <div className="flex gap-2 mt-2">
+        <button onClick={save} disabled={loading} className="flex-1 bg-blue-600 text-white py-2.5 rounded-lg text-sm font-semibold hover:bg-blue-700 disabled:opacity-60">
+          {loading ? 'Saving…' : 'Save Item'}
+        </button>
+        <button onClick={onClose} className="px-4 py-2 border border-slate-200 rounded-lg text-sm font-semibold hover:bg-slate-50">Cancel</button>
+      </div>
+    </div>
+  )
+}
+
+function BulkInventoryUpload({ onClose, onSave }: { onClose: ()=>void; onSave: ()=>void }) {
+  const fileRef = useRef<HTMLInputElement>(null)
+  const [rows, setRows] = useState<Record<string, string>[]>([])
+  const [fileName, setFileName] = useState('')
+  const [uploading, setUploading] = useState(false)
+  const [result, setResult] = useState<{ success: number; failed: number } | null>(null)
+
+  function downloadTemplate() {
+    const blob = new Blob([INV_CSV_TEMPLATE], { type: 'text/csv;charset=utf-8;' })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url; a.download = 'inventory_upload_template.csv'
+    document.body.appendChild(a); a.click()
+    document.body.removeChild(a); URL.revokeObjectURL(url)
+  }
+
+  function handleFile(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0]
+    if (!file) return
+    setFileName(file.name)
+    setResult(null)
+    const reader = new FileReader()
+    reader.onload = ev => {
+      const text = ev.target?.result as string
+      setRows(parseCSV(text))
+    }
+    reader.readAsText(file)
+  }
+
+  async function upload() {
+    if (rows.length === 0) { toast.error('No rows to upload'); return }
+    setUploading(true)
+    const supabase = createClient()
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) { toast.error('Not authenticated'); setUploading(false); return }
+    const { data: staff } = await supabase.from('staff_profiles').select('clinic_id').eq('id', user.id).single()
+    if (!staff) { toast.error('Staff profile not found'); setUploading(false); return }
+
+    const valid = rows.filter(r => r.name?.trim())
+    if (valid.length === 0) { toast.error('No valid rows — name is required'); setUploading(false); return }
+
+    const payload = valid.map(r => ({
+      clinic_id: staff.clinic_id,
+      name: r.name.trim(),
+      category: CATEGORIES.includes(r.category?.trim()) ? r.category.trim() : 'Other',
+      unit: UNITS.includes(r.unit?.trim()) ? r.unit.trim() : 'piece',
+      stock_quantity: Number(r.stock_quantity) || 0,
+      reorder_level: Number(r.reorder_level) || 5,
+      unit_cost: r.unit_cost?.trim() ? Number(r.unit_cost) : null,
+      supplier: r.supplier?.trim() || null,
+      notes: r.notes?.trim() || null,
+    }))
+
+    const { data: inserted, error } = await supabase.from('inventory_items').insert(payload).select('id')
+    const successCount = inserted?.length || 0
+    const failedCount = valid.length - successCount
+
+    if (error) toast.error(error.message)
+    else toast.success(`${successCount} item${successCount !== 1 ? 's' : ''} added to inventory`)
+
+    setResult({ success: successCount, failed: rows.length - valid.length + failedCount })
+    setUploading(false)
+    if (!error) setTimeout(() => onSave(), 1200)
+  }
+
+  return (
+    <div className="space-y-4">
+      <div className="flex items-center justify-between p-3 bg-slate-50 rounded-xl border border-slate-200">
+        <div>
+          <div className="text-xs font-bold text-slate-700">CSV Template</div>
+          <div className="text-xs text-slate-500 mt-0.5">Download to see the required columns and format</div>
+        </div>
+        <button onClick={downloadTemplate} className="flex items-center gap-1.5 text-xs font-semibold text-blue-600 border border-blue-200 px-3 py-2 rounded-lg hover:bg-blue-50 transition-colors whitespace-nowrap">
+          <Download size={13}/> Download Template
+        </button>
+      </div>
+
+      <div>
+        <label className="block text-xs font-semibold text-slate-600 mb-1.5">Upload CSV File</label>
+        <div
+          onClick={() => fileRef.current?.click()}
+          className="border-2 border-dashed border-slate-200 rounded-xl p-6 text-center cursor-pointer hover:border-blue-300 hover:bg-blue-50/30 transition-all"
+        >
+          <Upload size={20} className="mx-auto mb-2 text-slate-400" />
+          {fileName
+            ? <div className="text-sm font-semibold text-slate-700">{fileName}</div>
+            : <div className="text-sm text-slate-400">Click to choose a CSV file</div>}
+          {rows.length > 0 && <div className="text-xs text-blue-600 font-semibold mt-1">{rows.length} row{rows.length !== 1 ? 's' : ''} detected</div>}
+          <input ref={fileRef} type="file" accept=".csv,text/csv" className="hidden" onChange={handleFile} />
+        </div>
+      </div>
+
+      {rows.length > 0 && !result && (
+        <div className="border border-slate-200 rounded-xl overflow-hidden">
+          <div className="bg-slate-50 px-3 py-2 text-xs font-bold text-slate-500 uppercase tracking-wide">
+            Preview — first {Math.min(3, rows.length)} of {rows.length} rows
           </div>
-          <div className="grid grid-cols-2 gap-3">
-            <F label="Current Stock *" type="number" value={f.stock_quantity} onChange={s('stock_quantity')} placeholder="0"/>
-            <F label="Reorder Alert Level *" type="number" value={f.reorder_level} onChange={s('reorder_level')} placeholder="5"/>
-          </div>
-          <div className="grid grid-cols-2 gap-3">
-            <F label="Unit Cost (₱)" type="number" value={f.unit_cost} onChange={s('unit_cost')} placeholder="0.00"/>
-            <F label="Supplier" value={f.supplier} onChange={s('supplier')} placeholder="Supplier name"/>
-          </div>
-          <div><label className="block text-xs font-semibold text-slate-600 mb-1">Notes</label>
-            <textarea value={f.notes} onChange={s('notes')} rows={2} placeholder="Storage instructions, expiry…"
-              className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm outline-none focus:border-blue-400 resize-none"/>
+          <div className="overflow-x-auto">
+            <table className="w-full text-xs">
+              <thead>
+                <tr className="border-b border-slate-100">
+                  {['name','category','unit','stock_quantity','reorder_level'].map(h => (
+                    <th key={h} className="px-3 py-2 text-left font-semibold text-slate-500 capitalize">{h.replace('_',' ')}</th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {rows.slice(0, 3).map((r, i) => (
+                  <tr key={i} className={cn('border-b border-slate-50', !r.name && 'bg-red-50')}>
+                    <td className={cn('px-3 py-2 font-medium', !r.name && 'text-red-500')}>{r.name || '⚠ missing'}</td>
+                    <td className="px-3 py-2 text-slate-600">{r.category || 'Other'}</td>
+                    <td className="px-3 py-2 text-slate-600">{r.unit || 'piece'}</td>
+                    <td className="px-3 py-2 text-slate-600">{r.stock_quantity || '0'}</td>
+                    <td className="px-3 py-2 text-slate-600">{r.reorder_level || '5'}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
           </div>
         </div>
-        <div className="flex gap-2 mt-5">
-          <button onClick={save} disabled={loading} className="flex-1 bg-blue-600 text-white py-2.5 rounded-lg text-sm font-semibold hover:bg-blue-700 disabled:opacity-60">
-            {loading ? 'Saving…' : 'Save Item'}
-          </button>
-          <button onClick={onClose} className="px-4 py-2 border border-slate-200 rounded-lg text-sm font-semibold hover:bg-slate-50">Cancel</button>
+      )}
+
+      {result && (
+        <div className={cn('rounded-xl p-4 text-sm font-semibold', result.failed === 0 ? 'bg-emerald-50 border border-emerald-200 text-emerald-700' : 'bg-amber-50 border border-amber-200 text-amber-700')}>
+          ✓ {result.success} item{result.success !== 1 ? 's' : ''} added{result.failed > 0 ? ` · ${result.failed} skipped (missing name)` : ''}
         </div>
+      )}
+
+      <div className="flex gap-2">
+        <button
+          onClick={upload}
+          disabled={uploading || rows.length === 0 || !!result}
+          className="flex-1 bg-blue-600 text-white py-2.5 rounded-lg text-sm font-semibold hover:bg-blue-700 disabled:opacity-60 flex items-center justify-center gap-2"
+        >
+          <Upload size={14}/>
+          {uploading ? 'Uploading…' : result ? 'Done' : `Upload ${rows.length} Item${rows.length !== 1 ? 's' : ''}`}
+        </button>
+        <button onClick={onClose} className="px-4 py-2 border border-slate-200 rounded-lg text-sm font-semibold hover:bg-slate-50">
+          {result ? 'Close' : 'Cancel'}
+        </button>
       </div>
     </div>
   )
