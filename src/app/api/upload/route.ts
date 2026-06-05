@@ -1,9 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
-import { getOrCreatePatientFolder, uploadFileToDrive, deleteFileFromDrive } from '@/lib/google-drive'
+import cloudinary from '@/lib/cloudinary'
 
 const ALLOWED_MIME_TYPES = ['image/jpeg', 'image/png', 'application/pdf']
-const MAX_BYTES = 50 * 1024 * 1024 // 50 MB
+const MAX_BYTES = 50 * 1024 * 1024
 const VALID_FILE_TYPES = ['xray', 'lab_result'] as const
 
 // POST /api/upload
@@ -49,8 +49,6 @@ export async function POST(req: NextRequest) {
       )
     }
 
-    // Verify the patient belongs to this staff member's clinic (RLS enforces it in
-    // the insert below, but an early check gives a clearer error message)
     const { data: patient } = await supabase
       .from('patients')
       .select('id')
@@ -61,23 +59,21 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Patient not found' }, { status: 404 })
     }
 
-    // Upload to Google Drive
-    const folderId = await getOrCreatePatientFolder(patientId)
-    const buffer   = Buffer.from(await file.arrayBuffer())
-    const { fileId, webViewLink } = await uploadFileToDrive(
-      buffer,
-      file.name,
-      file.type,
-      folderId,
-    )
+    const bytes   = await file.arrayBuffer()
+    const base64  = Buffer.from(bytes).toString('base64')
+    const dataUri = `data:${file.type};base64,${base64}`
 
-    // Persist metadata in Supabase (RLS enforces clinic isolation)
+    const result = await cloudinary.uploader.upload(dataUri, {
+      folder:        `clinicore/patients/${patientId}/${fileType}`,
+      resource_type: 'auto',
+    })
+
     const { data: record, error: dbError } = await supabase
       .from('patient_files')
       .insert({
         patient_id:  patientId,
-        file_url:    webViewLink,
-        file_id:     fileId,
+        file_url:    result.secure_url,
+        file_id:     result.public_id,
         file_name:   file.name,
         file_type:   fileType,
         uploaded_by: user.id,
@@ -86,12 +82,11 @@ export async function POST(req: NextRequest) {
       .single()
 
     if (dbError) {
-      // Best-effort cleanup of the Drive file so we don't leave orphans
-      await deleteFileFromDrive(fileId).catch(() => null)
+      await cloudinary.uploader.destroy(result.public_id, { resource_type: 'image', invalidate: true }).catch(() => null)
       return NextResponse.json({ error: dbError.message }, { status: 500 })
     }
 
-    return NextResponse.json({ fileId, webViewLink, record }, { status: 201 })
+    return NextResponse.json({ url: result.secure_url, fileId: result.public_id, record }, { status: 201 })
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : 'Upload failed'
     console.error('[/api/upload POST]', err)
@@ -114,7 +109,6 @@ export async function DELETE(req: NextRequest) {
       return NextResponse.json({ error: 'Missing recordId' }, { status: 400 })
     }
 
-    // Fetch the record (RLS ensures caller can only see their clinic's files)
     const { data: record } = await supabase
       .from('patient_files')
       .select('id, file_id')
@@ -125,10 +119,8 @@ export async function DELETE(req: NextRequest) {
       return NextResponse.json({ error: 'File not found' }, { status: 404 })
     }
 
-    // Delete from Google Drive first
-    await deleteFileFromDrive(record.file_id)
+    await cloudinary.uploader.destroy(record.file_id, { resource_type: 'image', invalidate: true })
 
-    // Then remove the DB record
     const { error: dbError } = await supabase
       .from('patient_files')
       .delete()
