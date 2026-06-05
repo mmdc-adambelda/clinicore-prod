@@ -129,9 +129,6 @@ export interface ClinicalVisit {
   // Diagnosis
   diagnosis_icd10: string | null
   diagnosis_description: string | null
-  // AI
-  ai_suggestion_id: string | null
-  ai_suggestion_accepted: boolean
   // Status
   is_completed: boolean
   completed_at: string | null
@@ -267,29 +264,6 @@ export interface Attachment {
   public_url: string | null
   description: string | null
   uploaded_by: string
-  created_at: string
-}
-
-// ── AI SUGGESTION ─────────────────────────────────────────────
-export interface AISuggestion {
-  id: string
-  clinic_id: string
-  visit_id: string | null
-  patient_id: string
-  raw_input: string
-  suggested_diagnosis: string | null
-  suggested_icd10: string | null
-  suggested_plan: string | null
-  soap_subjective: string | null
-  soap_objective: string | null
-  soap_assessment: string | null
-  soap_plan: string | null
-  medication_alerts: string | null
-  confidence_score: number | null
-  similar_cases_count: number | null
-  accepted: boolean
-  accepted_by: string | null
-  accepted_at: string | null
   created_at: string
 }
 
