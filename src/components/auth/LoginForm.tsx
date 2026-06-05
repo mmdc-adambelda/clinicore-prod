@@ -4,6 +4,7 @@ import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import toast from 'react-hot-toast'
 import Link from 'next/link'
+import Image from 'next/image'
 
 export default function LoginForm() {
   const router = useRouter()
@@ -29,9 +30,11 @@ export default function LoginForm() {
   return (
     <div className="bg-white/10 backdrop-blur-md border border-white/15 rounded-2xl p-8">
       <div className="text-center mb-8">
-        <div className="w-14 h-14 bg-blue-600 rounded-2xl flex items-center justify-center text-xl font-bold text-white mx-auto mb-4">CC</div>
+        <div className="w-16 h-16 rounded-2xl overflow-hidden mx-auto mb-4 bg-white">
+          <Image src="/logo.png" alt="CliniCore" width={64} height={64} className="w-full h-full object-contain" />
+        </div>
         <h1 className="text-2xl font-bold text-white">CliniCore EMR</h1>
-        <p className="text-slate-400 text-sm mt-1">Dental & Veterinary Practice Management</p>
+        <p className="text-slate-400 text-sm mt-1">Dental Practice Management</p>
       </div>
 
       <form onSubmit={handleSubmit} className="space-y-4">

@@ -1,6 +1,7 @@
 'use client'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
+import Image from 'next/image'
 import {
   LayoutDashboard, Calendar, Users, Stethoscope,
   Smile, CreditCard, Package,
@@ -54,8 +55,8 @@ export default function Sidebar({ staff }: Props) {
     <aside className="w-[220px] flex-shrink-0 bg-slate-900 text-white flex flex-col overflow-hidden">
       {/* Logo */}
       <div className="h-[60px] flex items-center gap-3 px-5 border-b border-white/8 flex-shrink-0">
-        <div className="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center text-sm font-bold flex-shrink-0">
-          CC
+        <div className="w-8 h-8 rounded-lg overflow-hidden flex-shrink-0 bg-white">
+          <Image src="/logo.png" alt="CliniCore" width={32} height={32} className="w-full h-full object-contain" />
         </div>
         <div>
           <div className="text-[15px] font-bold leading-none">CliniCore</div>

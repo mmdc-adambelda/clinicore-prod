@@ -4,6 +4,7 @@ import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import toast from 'react-hot-toast'
 import Link from 'next/link'
+import Image from 'next/image'
 
 export default function RegisterForm() {
   const router = useRouter()
@@ -60,7 +61,9 @@ export default function RegisterForm() {
   return (
     <div className="bg-white/10 backdrop-blur-md border border-white/15 rounded-2xl p-8">
       <div className="text-center mb-6">
-        <div className="w-12 h-12 bg-blue-600 rounded-xl flex items-center justify-center text-lg font-bold text-white mx-auto mb-3">CC</div>
+        <div className="w-14 h-14 rounded-xl overflow-hidden mx-auto mb-3 bg-white">
+          <Image src="/logo.png" alt="CliniCore" width={56} height={56} className="w-full h-full object-contain" />
+        </div>
         <h1 className="text-xl font-bold text-white">Create your clinic account</h1>
         <p className="text-slate-400 text-xs mt-1">Set up CliniCore for your practice</p>
       </div>

@@ -4,7 +4,7 @@ import './globals.css'
 
 export const metadata: Metadata = {
   title: { default: 'CliniCore EMR', template: '%s | CliniCore EMR' },
-  description: 'Dental & Veterinary Electronic Medical Records System',
+  description: 'Dental Clinic Electronic Medical Records System',
   robots: 'noindex, nofollow',
 }
 
