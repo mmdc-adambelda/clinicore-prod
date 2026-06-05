@@ -3,6 +3,7 @@ import { useRouter } from 'next/navigation'
 import type { Patient } from '@/types'
 import { cn, formatDate } from '@/lib/utils'
 import { Smile, Clock, CreditCard } from 'lucide-react'
+import FileUpload from '@/components/FileUpload'
 
 export default function PatientDetailView({ patient }: { patient: Patient & { clinical_visits?: any[]; invoices?: any[]; attachments?: any[] } }) {
   const router = useRouter()
@@ -97,6 +98,9 @@ export default function PatientDetailView({ patient }: { patient: Patient & { cl
           </div>
         </div>
       </div>
+
+      {/* Files — X-rays & Lab Results */}
+      <FileUpload patientId={patient.id} />
     </div>
   )
 }
