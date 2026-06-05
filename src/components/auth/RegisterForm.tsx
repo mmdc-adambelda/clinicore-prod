@@ -36,7 +36,7 @@ export default function RegisterForm() {
     // 2. Create clinic
     const { data: clinic, error: clinicErr } = await supabase
       .from('clinics')
-      .insert({ name: form.clinic_name, branch_name: form.branch_name, phone: form.phone, type: 'both' })
+      .insert({ name: form.clinic_name, branch_name: form.branch_name, phone: form.phone, type: 'dental' })
       .select().single()
 
     if (clinicErr || !clinic) {

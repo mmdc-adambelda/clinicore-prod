@@ -77,7 +77,7 @@ export default function SettingsView({ staff, auditLogs }: { staff: StaffProfile
             </thead>
             <tbody>
               {[
-                ['Dentist / Vet',  '✅ Full',      '👁 View',   '❌',        '✅ Own'],
+                ['Dentist',        '✅ Full',      '👁 View',   '❌',        '✅ Own'],
                 ['Front Desk',     '📅 Schedule',  '✅ Full',   '❌',        '✅ Limited'],
                 ['Admin / Owner',  '✅ Full',      '✅ Full',   '✅ Full',   '✅ Full'],
                 ['Receptionist',   '👁 View',      '👁 View',   '❌',        '❌'],
@@ -113,28 +113,6 @@ export default function SettingsView({ staff, auditLogs }: { staff: StaffProfile
             {auditLogs.length === 0 && (
               <div className="text-slate-400 text-xs text-center py-6">No log entries yet. Actions like patient creation, billing, and stock adjustments are logged here.</div>
             )}
-          </div>
-        </div>
-
-        {/* Tech Stack */}
-        <div className="bg-white border border-slate-200 rounded-xl p-5">
-          <h2 className="text-sm font-bold text-slate-700 uppercase tracking-wide mb-4">Production Stack</h2>
-          <div className="space-y-2.5">
-            {[
-              ['Frontend',     'Next.js 14 + TailwindCSS + TypeScript'],
-              ['Backend API',  'Next.js API Routes (serverless on Vercel)'],
-              ['Database',     'Supabase PostgreSQL + Row Level Security'],
-              ['Auth',         'Supabase Auth (email/password + JWT)'],
-              ['File Storage', 'Supabase Storage (X-rays, attachments)'],
-              ['AI Engine',    'Claude API (Anthropic) via /api/ai'],
-              ['Hosting',      'Vercel (auto-deploy from GitHub)'],
-              ['Realtime',     'Supabase Realtime subscriptions'],
-            ].map(([k, v]) => (
-              <div key={k} className="flex items-center justify-between text-sm">
-                <span className="text-slate-500 font-medium">{k}</span>
-                <span className="font-semibold text-slate-800 text-right text-xs max-w-[220px]">{v}</span>
-              </div>
-            ))}
           </div>
         </div>
 

@@ -488,7 +488,7 @@ function NewAppointmentModal({ date, onClose, onSaved }: { date:string; onClose:
           <div>
             <label className="block text-xs font-semibold text-slate-600 mb-1">Procedure / Reason</label>
             <input value={f.procedure_type} onChange={set('procedure_type')}
-              placeholder="e.g. Teeth Cleaning, Root Canal, Vaccination…"
+              placeholder="e.g. Teeth Cleaning, Root Canal, Extraction…"
               className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm outline-none focus:border-blue-400"/>
           </div>
           <div>

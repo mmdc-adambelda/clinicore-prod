@@ -3,14 +3,13 @@
 // Matches Supabase PostgreSQL schema exactly
 // ============================================================
 
-export type ClinicType = 'dental' | 'veterinary' | 'both'
-export type UserRole = 'admin' | 'dentist' | 'veterinarian' | 'front_desk' | 'receptionist'
-export type PatientType = 'dental' | 'veterinary'
+export type ClinicType = 'dental'
+export type UserRole = 'admin' | 'dentist' | 'front_desk' | 'receptionist'
+export type PatientType = 'dental'
 export type AppointmentStatus = 'scheduled' | 'confirmed' | 'in_chair' | 'completed' | 'cancelled' | 'no_show' | 'walk_in'
 export type BookingSource = 'online' | 'phone' | 'walk_in' | 'messenger' | 'follow_up' | 'referral'
 export type WorkflowStep = 'booking' | 'consultation' | 'diagnosis' | 'treatment_plan' | 'procedure' | 'billing' | 'follow_up'
 export type ToothStatus = 'healthy' | 'treated' | 'affected' | 'crown' | 'missing' | 'implant' | 'bridge' | 'root_canal'
-export type VaccinationStatus = 'up_to_date' | 'due_soon' | 'overdue'
 export type PaymentMode = 'cash' | 'installment_3' | 'installment_6' | 'insurance' | 'philhealth' | 'hmo'
 export type PaymentStatus = 'paid' | 'partial' | 'pending' | 'overdue' | 'waived'
 export type InvoiceStatus = 'draft' | 'issued' | 'partial' | 'paid' | 'overdue' | 'cancelled'
@@ -72,43 +71,7 @@ export interface Patient {
   updated_at: string
   // relations
   clinic?: Clinic
-  pet_profile?: PetProfile | null
   outstanding_balance?: number
-}
-
-// ── PET PROFILE ─────────────────────────────────────────────
-export interface PetProfile {
-  id: string
-  patient_id: string          // links to patients table (owner record)
-  pet_name: string
-  species: string
-  breed: string | null
-  weight_kg: number | null
-  age_years: number | null
-  sex: Sex | null
-  color: string | null
-  microchip_number: string | null
-  last_vaccination_date: string | null
-  next_vaccination_due: string | null
-  vaccination_status: VaccinationStatus
-  created_at: string
-  updated_at: string
-  // relations
-  owner?: Patient
-  vaccinations?: Vaccination[]
-}
-
-// ── VACCINATION ─────────────────────────────────────────────
-export interface Vaccination {
-  id: string
-  pet_id: string
-  vaccine_name: string
-  administered_date: string
-  next_due_date: string | null
-  batch_number: string | null
-  administered_by: string | null
-  notes: string | null
-  created_at: string
 }
 
 // ── CHAIR / RESOURCE ────────────────────────────────────────
@@ -116,7 +79,7 @@ export interface Chair {
   id: string
   clinic_id: string
   label: string
-  type: 'dental' | 'veterinary' | 'general'
+  type: 'dental' | 'general'
   is_active: boolean
 }
 
@@ -373,12 +336,6 @@ export interface PatientFormData {
   emergency_contact?: string
   emergency_phone?: string
   source?: BookingSource
-  // vet only
-  pet_name?: string
-  species?: string
-  breed?: string
-  weight_kg?: number
-  age_years?: number
 }
 
 export interface AppointmentFormData {

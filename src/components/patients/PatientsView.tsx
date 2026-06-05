@@ -7,8 +7,7 @@ import { cn, formatDate } from '@/lib/utils'
 import toast from 'react-hot-toast'
 import { Search, Plus } from 'lucide-react'
 
-const TYPE_BADGE: Record<string,string> = { dental:'bg-blue-100 text-blue-700', veterinary:'bg-purple-100 text-purple-700' }
-const STATUS_BADGE: Record<string,string> = { active:'bg-emerald-100 text-emerald-700', inactive:'bg-slate-100 text-slate-500', walk_in:'bg-amber-100 text-amber-700' }
+const STATUS_BADGE: Record<string,string> = { active:'bg-emerald-100 text-emerald-700', inactive:'bg-slate-100 text-slate-500' }
 
 export default function PatientsView({ patients, total }: { patients: Patient[]; total: number }) {
   const router = useRouter()
@@ -24,8 +23,8 @@ export default function PatientsView({ patients, total }: { patients: Patient[];
     <div className="space-y-4">
       <div className="flex items-center justify-between">
         <div className="flex gap-2">
-          {['All','Dental','Veterinary','New'].map(t => (
-            <button key={t} onClick={() => router.push(t === 'All' ? '/patients' : t === 'Veterinary' ? '/veterinary' : `/patients?type=${t.toLowerCase()}`)}
+          {['All','New'].map(t => (
+            <button key={t} onClick={() => router.push(t === 'All' ? '/patients' : `/patients?type=${t.toLowerCase()}`)}
               className="px-4 py-2 text-sm font-semibold rounded-lg border border-slate-200 bg-white hover:border-blue-300 hover:text-blue-600 transition-colors">
               {t}
             </button>
@@ -48,7 +47,7 @@ export default function PatientsView({ patients, total }: { patients: Patient[];
         <table className="w-full">
           <thead>
             <tr className="bg-slate-50 border-b border-slate-200">
-              {['Patient / ID','Type','Last Visit','Next Appt','Balance','Status',''].map(h => (
+              {['Patient / ID','Last Visit','Next Appt','Balance','Status',''].map(h => (
                 <th key={h} className="px-4 py-3 text-left text-[11px] font-bold text-slate-500 uppercase tracking-wider whitespace-nowrap">{h}</th>
               ))}
             </tr>
@@ -59,9 +58,7 @@ export default function PatientsView({ patients, total }: { patients: Patient[];
                 <td className="px-4 py-3">
                   <div className="font-semibold text-slate-900 text-sm">{p.full_name}</div>
                   <div className="text-xs text-slate-400">{p.id}</div>
-                  {p.pet_profile && <div className="text-xs text-purple-600">🐾 {p.pet_profile.pet_name}</div>}
                 </td>
-                <td className="px-4 py-3"><span className={cn('badge text-xs font-semibold px-2 py-0.5 rounded-full', TYPE_BADGE[p.patient_type])}>{p.patient_type === 'dental' ? '🦷' : '🐾'} {p.patient_type}</span></td>
                 <td className="px-4 py-3 text-sm text-slate-600">{p.updated_at ? formatDate(p.updated_at) : '—'}</td>
                 <td className="px-4 py-3 text-sm text-slate-600">—</td>
                 <td className="px-4 py-3">
@@ -77,7 +74,7 @@ export default function PatientsView({ patients, total }: { patients: Patient[];
               </tr>
             ))}
             {patients.length === 0 && (
-              <tr><td colSpan={7} className="text-center py-12 text-slate-400 text-sm">No patients found. Add your first patient.</td></tr>
+              <tr><td colSpan={6} className="text-center py-12 text-slate-400 text-sm">No patients found. Add your first patient.</td></tr>
             )}
           </tbody>
         </table>
@@ -90,11 +87,8 @@ export default function PatientsView({ patients, total }: { patients: Patient[];
 
 function NewPatientModal({ onClose }: { onClose: () => void }) {
   const [loading, setLoading] = useState(false)
-  const [type, setType] = useState<'dental'|'veterinary'>('dental')
   const [f, setF] = useState({ first_name:'', last_name:'', date_of_birth:'', sex:'female', contact_number:'', email:'', allergies:'', medical_history:'', source:'walk_in' })
-  const [pet, setPet] = useState({ pet_name:'', species:'Dog', breed:'', weight_kg:0, age_years:0 })
   const s = (k:string) => (e:React.ChangeEvent<HTMLInputElement|HTMLSelectElement|HTMLTextAreaElement>) => setF(p=>({...p,[k]:e.target.value}))
-  const sp = (k:string) => (e:React.ChangeEvent<HTMLInputElement|HTMLSelectElement>) => setPet(p=>({...p,[k]:e.target.value}))
 
   async function save() {
     if (!f.first_name || !f.last_name) { toast.error('Name is required'); return }
@@ -105,18 +99,11 @@ function NewPatientModal({ onClose }: { onClose: () => void }) {
     const { data: staff } = await supabase.from('staff_profiles').select('clinic_id').eq('id', user.id).single()
     if (!staff) { toast.error('Profile error'); setLoading(false); return }
 
-    const { data: patient, error } = await supabase.from('patients').insert({ ...f, patient_type: type, clinic_id: staff.clinic_id }).select().single()
+    const { data: patient, error } = await supabase.from('patients').insert({ ...f, patient_type: 'dental', clinic_id: staff.clinic_id }).select().single()
     if (error || !patient) { toast.error(error?.message || 'Failed to create patient'); setLoading(false); return }
 
-    if (type === 'veterinary') {
-      await supabase.from('pet_profiles').insert({ ...pet, patient_id: patient.id })
-    }
-
-    // Insert default dental chart entries
-    if (type === 'dental') {
-      const teeth = [11,12,13,14,15,16,17,18,21,22,23,24,25,26,27,28,31,32,33,34,35,36,37,38,41,42,43,44,45,46,47,48]
-      await supabase.from('dental_charts').insert(teeth.map(t => ({ patient_id: patient.id, tooth_number: t, status:'healthy' })))
-    }
+    const teeth = [11,12,13,14,15,16,17,18,21,22,23,24,25,26,27,28,31,32,33,34,35,36,37,38,41,42,43,44,45,46,47,48]
+    await supabase.from('dental_charts').insert(teeth.map(t => ({ patient_id: patient.id, tooth_number: t, status:'healthy' })))
 
     toast.success('Patient saved!')
     onClose()
@@ -128,14 +115,6 @@ function NewPatientModal({ onClose }: { onClose: () => void }) {
         <div className="flex items-center justify-between mb-5">
           <h2 className="text-lg font-bold">Add New Patient</h2>
           <button onClick={onClose} className="text-slate-400 hover:text-slate-600 text-xl">✕</button>
-        </div>
-
-        <div className="flex gap-2 mb-4">
-          {(['dental','veterinary'] as const).map(t => (
-            <button key={t} onClick={() => setType(t)} className={cn('flex-1 py-2 rounded-lg text-sm font-semibold border transition-colors', type === t ? 'bg-blue-600 text-white border-blue-600' : 'border-slate-200 text-slate-600 hover:border-blue-300')}>
-              {t === 'dental' ? '🦷 Dental Patient' : '🐾 Veterinary Patient'}
-            </button>
-          ))}
         </div>
 
         <div className="space-y-3">
@@ -159,25 +138,6 @@ function NewPatientModal({ onClose }: { onClose: () => void }) {
           <div><label className="block text-xs font-semibold text-slate-600 mb-1">Medical History</label>
             <textarea value={f.medical_history} onChange={s('medical_history')} rows={2} className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm outline-none focus:border-blue-400 resize-none" placeholder="Hypertension, diabetes, prior surgeries…" />
           </div>
-
-          {type === 'veterinary' && (
-            <div className="border-t border-slate-100 pt-3 space-y-3">
-              <div className="text-xs font-bold text-slate-500 uppercase tracking-wider">Pet Information</div>
-              <div className="grid grid-cols-2 gap-3">
-                <F label="Pet Name" value={pet.pet_name} onChange={sp('pet_name')} />
-                <div><label className="block text-xs font-semibold text-slate-600 mb-1">Species</label>
-                  <select value={pet.species} onChange={sp('species')} className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm outline-none focus:border-blue-400">
-                    {['Dog','Cat','Rabbit','Bird','Hamster','Other'].map(s => <option key={s}>{s}</option>)}
-                  </select>
-                </div>
-              </div>
-              <div className="grid grid-cols-3 gap-3">
-                <F label="Breed" value={pet.breed} onChange={sp('breed')} />
-                <F label="Weight (kg)" type="number" value={String(pet.weight_kg)} onChange={sp('weight_kg')} />
-                <F label="Age (years)" type="number" value={String(pet.age_years)} onChange={sp('age_years')} />
-              </div>
-            </div>
-          )}
         </div>
 
         <div className="flex gap-2 mt-5">

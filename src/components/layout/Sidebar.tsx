@@ -3,7 +3,7 @@ import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import {
   LayoutDashboard, Calendar, Users, Stethoscope,
-  Smile, PawPrint, Bot, CreditCard, Package,
+  Smile, Bot, CreditCard, Package,
   BarChart3, Settings, LogOut
 } from 'lucide-react'
 import type { StaffProfile } from '@/types'
@@ -21,7 +21,6 @@ const NAV: { group: string; items: { href: string; icon: any; label: string; bad
   ]},
   { group: 'Specialty', items: [
     { href: '/dental',       icon: Smile,            label: 'Dental Charts' },
-    { href: '/veterinary',   icon: PawPrint,         label: 'Veterinary' },
     { href: '/ai',           icon: Bot,              label: 'AI Assistant',  exact: false },
   ]},
   { group: 'Operations', items: [

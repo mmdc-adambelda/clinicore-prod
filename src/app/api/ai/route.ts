@@ -44,7 +44,7 @@ Past Diagnoses: ${
 }
 ` : ''
 
-  const prompt = `You are an AI clinical assistant embedded in an EMR system for dental and veterinary clinics in the Philippines.
+  const prompt = `You are an AI clinical assistant embedded in an EMR system for dental clinics in the Philippines.
 
 ${patientContext}
 

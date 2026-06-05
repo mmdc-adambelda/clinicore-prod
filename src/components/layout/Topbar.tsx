@@ -1,9 +1,10 @@
 'use client'
 import { Bell, Plus, Search, X, CheckCircle, AlertTriangle, Calendar } from 'lucide-react'
 import { usePathname, useRouter } from 'next/navigation'
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import type { StaffProfile } from '@/types'
 import { cn } from '@/lib/utils'
+import { createClient } from '@/lib/supabase/client'
 
 const TITLE_MAP: Record<string, string> = {
   '/dashboard':    'Dashboard',
@@ -13,7 +14,6 @@ const TITLE_MAP: Record<string, string> = {
   '/inventory':    'Inventory',
   '/reports':      'Reports & KPIs',
   '/settings':     'Settings',
-  '/veterinary':   'Veterinary',
 }
 
 function getTitle(pathname: string) {
@@ -25,32 +25,128 @@ function getTitle(pathname: string) {
   return 'CliniCore EMR'
 }
 
-const NOTIFICATIONS = [
-  { id: 1, icon: AlertTriangle, color: 'text-amber-500', bg: 'bg-amber-50', title: '3 patients missed follow-up', time: '10 min ago', unread: true },
-  { id: 2, icon: Calendar,      color: 'text-blue-500',  bg: 'bg-blue-50',  title: 'New appointment booked — Maria Santos 2:00 PM', time: '25 min ago', unread: true },
-  { id: 3, icon: AlertTriangle, color: 'text-red-500',   bg: 'bg-red-50',   title: 'Inventory alert: Composite Resin out of stock', time: '1 hr ago', unread: true },
-  { id: 4, icon: CheckCircle,   color: 'text-emerald-500', bg: 'bg-emerald-50', title: 'Invoice OR-2025-01042 marked as paid', time: '2 hrs ago', unread: false },
-]
+type Notif = {
+  id: number
+  icon: typeof AlertTriangle
+  color: string
+  bg: string
+  title: string
+  time: string
+  unread: boolean
+}
+
+function timeAgo(iso: string): string {
+  const diff = Math.floor((Date.now() - new Date(iso).getTime()) / 1000)
+  if (diff < 60) return 'just now'
+  if (diff < 3600) return `${Math.floor(diff / 60)} min ago`
+  if (diff < 86400) return `${Math.floor(diff / 3600)} hr ago`
+  return `${Math.floor(diff / 86400)} days ago`
+}
 
 export default function Topbar({ staff: _staff }: { staff: StaffProfile }) {
   const pathname = usePathname()
   const router = useRouter()
   const [search, setSearch] = useState('')
-  const [clinicMode, setClinicMode] = useState<'dental' | 'vet'>('dental')
   const [showNotifs, setShowNotifs] = useState(false)
-  const [notifications, setNotifications] = useState(NOTIFICATIONS)
+  const [notifications, setNotifications] = useState<Notif[]>([])
 
   const unreadCount = notifications.filter(n => n.unread).length
+
+  useEffect(() => {
+    async function loadNotifications() {
+      const supabase = createClient()
+      const { data: { user } } = await supabase.auth.getUser()
+      if (!user) return
+
+      const { data: staff } = await supabase
+        .from('staff_profiles')
+        .select('clinic_id')
+        .eq('id', user.id)
+        .single()
+      if (!staff) return
+
+      const clinicId = staff.clinic_id
+      const now = new Date()
+      const dayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 0, 0, 0, 0).toISOString()
+      const dayEnd   = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59, 999).toISOString()
+
+      const [invRes, invoiceRes, apptRes] = await Promise.all([
+        supabase.from('inventory_items')
+          .select('id, name, status, updated_at')
+          .eq('clinic_id', clinicId)
+          .in('status', ['out_of_stock', 'critical', 'low'])
+          .order('updated_at', { ascending: false })
+          .limit(5),
+        supabase.from('invoices')
+          .select('id, or_number, balance, updated_at')
+          .eq('clinic_id', clinicId)
+          .eq('status', 'overdue')
+          .order('updated_at', { ascending: false })
+          .limit(3),
+        supabase.from('appointments')
+          .select('id, scheduled_at, status')
+          .eq('clinic_id', clinicId)
+          .gte('scheduled_at', dayStart)
+          .lte('scheduled_at', dayEnd)
+          .order('scheduled_at', { ascending: true })
+          .limit(5),
+      ])
+
+      const notifs: Notif[] = []
+      let id = 1
+
+      // Inventory alerts
+      for (const item of invRes.data || []) {
+        const isOut = item.status === 'out_of_stock'
+        notifs.push({
+          id: id++,
+          icon: AlertTriangle,
+          color: isOut ? 'text-red-500' : 'text-amber-500',
+          bg: isOut ? 'bg-red-50' : 'bg-amber-50',
+          title: isOut
+            ? `Inventory alert: ${item.name} is out of stock`
+            : `Inventory low: ${item.name} is running low`,
+          time: timeAgo(item.updated_at),
+          unread: true,
+        })
+      }
+
+      // Overdue invoices
+      for (const inv of invoiceRes.data || []) {
+        notifs.push({
+          id: id++,
+          icon: AlertTriangle,
+          color: 'text-red-500',
+          bg: 'bg-red-50',
+          title: `Overdue invoice ${inv.or_number} — ₱${Number(inv.balance).toLocaleString()} remaining`,
+          time: timeAgo(inv.updated_at),
+          unread: true,
+        })
+      }
+
+      // Today's appointments
+      const todayAppts = (apptRes.data || []).filter(a => a.status === 'scheduled' || a.status === 'confirmed')
+      if (todayAppts.length > 0) {
+        notifs.push({
+          id: id++,
+          icon: Calendar,
+          color: 'text-blue-500',
+          bg: 'bg-blue-50',
+          title: `${todayAppts.length} appointment${todayAppts.length > 1 ? 's' : ''} scheduled for today`,
+          time: 'Today',
+          unread: false,
+        })
+      }
+
+      setNotifications(notifs)
+    }
+
+    loadNotifications()
+  }, [])
 
   function handleSearch(e: React.FormEvent) {
     e.preventDefault()
     if (search.trim()) router.push(`/patients?search=${encodeURIComponent(search.trim())}`)
-  }
-
-  function handleModeSwitch(mode: 'dental' | 'vet') {
-    setClinicMode(mode)
-    if (mode === 'vet') router.push('/veterinary')
-    else router.push('/patients')
   }
 
   function markAllRead() {
@@ -79,32 +175,6 @@ export default function Topbar({ staff: _staff }: { staff: StaffProfile }) {
         />
       </form>
 
-      {/* Dental / Vet toggle */}
-      <div className="flex items-center gap-1 bg-slate-100 rounded-lg p-1">
-        <button
-          onClick={() => handleModeSwitch('dental')}
-          className={cn(
-            'px-3 py-1.5 rounded-md text-xs font-semibold transition-all',
-            clinicMode === 'dental'
-              ? 'bg-blue-600 text-white shadow-sm'
-              : 'text-slate-600 hover:bg-white hover:shadow-sm'
-          )}
-        >
-          🦷 Dental
-        </button>
-        <button
-          onClick={() => handleModeSwitch('vet')}
-          className={cn(
-            'px-3 py-1.5 rounded-md text-xs font-semibold transition-all',
-            clinicMode === 'vet'
-              ? 'bg-purple-600 text-white shadow-sm'
-              : 'text-slate-600 hover:bg-white hover:shadow-sm'
-          )}
-        >
-          🐾 Vet
-        </button>
-      </div>
-
       {/* Notifications bell */}
       <div className="relative">
         <button
@@ -122,7 +192,6 @@ export default function Topbar({ staff: _staff }: { staff: StaffProfile }) {
         {/* Dropdown */}
         {showNotifs && (
           <>
-            {/* Backdrop */}
             <div className="fixed inset-0 z-40" onClick={() => setShowNotifs(false)} />
 
             <div className="absolute right-0 top-11 w-80 bg-white border border-slate-200 rounded-xl shadow-xl z-50 overflow-hidden">
@@ -141,6 +210,9 @@ export default function Topbar({ staff: _staff }: { staff: StaffProfile }) {
               </div>
 
               <div className="max-h-72 overflow-y-auto divide-y divide-slate-100">
+                {notifications.length === 0 && (
+                  <div className="px-4 py-8 text-center text-xs text-slate-400">No notifications</div>
+                )}
                 {notifications.map(n => {
                   const Icon = n.icon
                   return (
@@ -165,12 +237,6 @@ export default function Topbar({ staff: _staff }: { staff: StaffProfile }) {
                     </div>
                   )
                 })}
-              </div>
-
-              <div className="px-4 py-2.5 border-t border-slate-100 text-center">
-                <button className="text-xs font-semibold text-blue-600 hover:underline">
-                  View all notifications
-                </button>
               </div>
             </div>
           </>

@@ -2,11 +2,10 @@
 import { useRouter } from 'next/navigation'
 import type { Patient } from '@/types'
 import { cn, formatDate } from '@/lib/utils'
-import { Smile, PawPrint, Clock, CreditCard } from 'lucide-react'
+import { Smile, Clock, CreditCard } from 'lucide-react'
 
 export default function PatientDetailView({ patient }: { patient: Patient & { clinical_visits?: any[]; invoices?: any[]; attachments?: any[] } }) {
   const router = useRouter()
-  const isDental = patient.patient_type === 'dental'
   const visits = patient.clinical_visits || []
   const invoices = patient.invoices || []
 
@@ -14,14 +13,14 @@ export default function PatientDetailView({ patient }: { patient: Patient & { cl
     <div className="space-y-5">
       {/* Header */}
       <div className="bg-white border border-slate-200 rounded-xl p-5 flex items-start gap-4">
-        <div className={cn('w-14 h-14 rounded-xl flex items-center justify-center text-white text-lg font-bold flex-shrink-0', isDental ? 'bg-blue-600' : 'bg-purple-600')}>
+        <div className="w-14 h-14 rounded-xl flex items-center justify-center text-white text-lg font-bold flex-shrink-0 bg-blue-600">
           {patient.full_name.split(' ').map(n=>n[0]).join('').slice(0,2).toUpperCase()}
         </div>
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-3 flex-wrap">
             <h1 className="text-xl font-bold text-slate-900">{patient.full_name}</h1>
-            <span className={cn('text-xs font-semibold px-2 py-0.5 rounded-full', isDental ? 'bg-blue-100 text-blue-700' : 'bg-purple-100 text-purple-700')}>
-              {isDental ? '🦷 Dental' : '🐾 Veterinary'}
+            <span className="text-xs font-semibold px-2 py-0.5 rounded-full bg-blue-100 text-blue-700">
+              🦷 Dental
             </span>
           </div>
           <div className="flex gap-4 mt-1 flex-wrap text-sm text-slate-500">
@@ -34,9 +33,9 @@ export default function PatientDetailView({ patient }: { patient: Patient & { cl
           {patient.allergies && <div className="mt-1 text-xs font-semibold text-red-600 bg-red-50 px-2 py-0.5 rounded inline-block">⚠️ Allergies: {patient.allergies}</div>}
         </div>
         <div className="flex gap-2 flex-shrink-0">
-          <button onClick={() => router.push(isDental ? `/dental/${patient.id}` : `/veterinary/${patient.id}`)}
+          <button onClick={() => router.push(`/dental/${patient.id}`)}
             className="flex items-center gap-1.5 border border-slate-200 text-slate-700 px-3 py-2 rounded-lg text-sm font-semibold hover:border-blue-300 hover:text-blue-600 transition-colors">
-            {isDental ? <Smile size={14}/> : <PawPrint size={14}/>} View Chart
+            <Smile size={14}/> View Chart
           </button>
           <button onClick={() => router.push('/billing')}
             className="flex items-center gap-1.5 bg-blue-600 text-white px-3 py-2 rounded-lg text-sm font-semibold hover:bg-blue-700">

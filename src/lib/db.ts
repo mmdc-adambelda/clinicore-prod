@@ -1,10 +1,10 @@
 // src/lib/db.ts
 // All Supabase data access — called from Server Components and API routes
 import { createClient } from '@/lib/supabase/server'
-import type { // eslint-disable-next-line
+import type {
   Patient, Appointment, ClinicalVisit, DentalChart,
   InventoryItem, Invoice, Payment, AuditLog,
-  DashboardStats, PetProfile, StaffProfile,
+  DashboardStats, StaffProfile,
 } from '@/types'
 
 // ── AUDIT ────────────────────────────────────────────────────
@@ -189,23 +189,21 @@ export async function getDashboardStats(): Promise<DashboardStats & {
 // ── PATIENTS ──────────────────────────────────────────────────
 export async function getPatients(opts: {
   search?: string
-  type?: 'dental' | 'veterinary'
   page?: number
   perPage?: number
 } = {}) {
   const supabase = createClient()
-  const { search, type, page = 1, perPage = 25 } = opts
+  const { search, page = 1, perPage = 25 } = opts
   const from = (page - 1) * perPage
   const to = from + perPage - 1
 
   let query = supabase
     .from('patients')
-    .select('*, pet_profile:pet_profiles(*)', { count: 'exact' })
+    .select('*', { count: 'exact' })
     .eq('is_active', true)
     .order('created_at', { ascending: false })
     .range(from, to)
 
-  if (type) query = query.eq('patient_type', type)
   if (search) query = query.textSearch('full_name', search, { type: 'websearch' })
 
   const { data, error, count } = await query
@@ -218,7 +216,6 @@ export async function getPatient(id: string) {
     .from('patients')
     .select(`
       *,
-      pet_profile:pet_profiles(*, vaccinations(*)),
       clinical_visits(
         id, workflow_step, diagnosis_description, created_at, is_completed,
         treatment_items(id, procedure_name, total_cost, is_completed)
@@ -231,23 +228,18 @@ export async function getPatient(id: string) {
   return { data, error }
 }
 
-export async function createPatient(payload: Partial<Patient> & { pet_profile?: Partial<PetProfile> }) {
+export async function createPatient(payload: Partial<Patient>) {
   const supabase = createClient()
   const staff = await getCurrentStaff()
   if (!staff) throw new Error('Not authenticated')
 
-  const { pet_profile, ...patientData } = payload
   const { data: patient, error } = await supabase
     .from('patients')
-    .insert({ ...patientData, clinic_id: staff.clinic_id })
+    .insert({ ...payload, clinic_id: staff.clinic_id })
     .select()
     .single()
 
   if (error || !patient) throw error
-
-  if (patientData.patient_type === 'veterinary' && pet_profile) {
-    await supabase.from('pet_profiles').insert({ ...pet_profile, patient_id: patient.id })
-  }
 
   await logAudit('created', 'patient', patient.id, { name: patient.full_name })
   return patient
@@ -345,7 +337,7 @@ export async function getClinicalVisit(id: string) {
     .from('clinical_visits')
     .select(`
       *,
-      patient:patients(*, pet_profile:pet_profiles(*)),
+      patient:patients(*),
       staff:staff_profiles(id, full_name, role),
       appointment:appointments(*),
       treatment_items(*),
