@@ -5,7 +5,6 @@ function getDriveClient() {
   const auth = new google.auth.GoogleAuth({
     credentials: {
       client_email: process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL!,
-      // .env.local stores the key with literal \n — convert to real newlines
       private_key: process.env.GOOGLE_PRIVATE_KEY!.replace(/\\n/g, '\n'),
     },
     scopes: ['https://www.googleapis.com/auth/drive'],
@@ -13,10 +12,6 @@ function getDriveClient() {
   return google.drive({ version: 'v3', auth })
 }
 
-/**
- * Returns the Drive folder ID for a given patientId, creating it if needed.
- * Folders are created inside GOOGLE_DRIVE_FOLDER_ID.
- */
 export async function getOrCreatePatientFolder(patientId: string): Promise<string> {
   const drive = getDriveClient()
   const parentId = process.env.GOOGLE_DRIVE_FOLDER_ID!
@@ -51,28 +46,27 @@ export async function uploadFileToDrive(
 ): Promise<{ fileId: string; webViewLink: string }> {
   const drive = getDriveClient()
 
-  const body = new Readable()
-  body.push(buffer)
-  body.push(null)
+  const readable = new Readable()
+  readable.push(buffer)
+  readable.push(null)
 
   const uploaded = await drive.files.create({
-    requestBody: { name: fileName, parents: [folderId] },
-    media: { mimeType, body },
-    fields: 'id, webViewLink',
+    requestBody: {
+      name: fileName,
+      parents: [process.env.GOOGLE_DRIVE_FOLDER_ID!],
+    },
+    media: { mimeType, body: readable },
+    fields: 'id, webViewLink, webContentLink, name',
   })
 
   const fileId = uploaded.data.id!
 
-  // Grant view access to anyone with the link so clinic staff can open it
   await drive.permissions.create({
     fileId,
     requestBody: { role: 'reader', type: 'anyone' },
   })
 
-  // webViewLink is already set during create, but fetch it back to be sure
-  const meta = await drive.files.get({ fileId, fields: 'webViewLink' })
-
-  return { fileId, webViewLink: meta.data.webViewLink! }
+  return { fileId, webViewLink: uploaded.data.webViewLink! }
 }
 
 export async function deleteFileFromDrive(fileId: string): Promise<void> {
