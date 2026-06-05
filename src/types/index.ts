@@ -281,6 +281,21 @@ export interface AuditLog {
   created_at: string
 }
 
+// ── PATIENT FILE (Google Drive) ───────────────────────────────
+export type PatientFileType = 'xray' | 'lab_result'
+
+export interface PatientFile {
+  id: string
+  patient_id: string
+  file_url: string
+  file_id: string
+  file_name: string
+  file_type: PatientFileType
+  notes: string | null
+  uploaded_by: string
+  created_at: string
+}
+
 // ── API RESPONSE TYPES ────────────────────────────────────────
 export interface ApiResponse<T> {
   data: T | null
