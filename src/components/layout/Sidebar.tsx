@@ -10,7 +10,6 @@ import {
 import type { StaffProfile } from '@/types'
 import { createClient } from '@/lib/supabase/client'
 import { useRouter } from 'next/navigation'
-import { useState, useEffect } from 'react'
 import toast from 'react-hot-toast'
 import { cn } from '@/lib/utils'
 
@@ -19,30 +18,6 @@ interface Props { staff: StaffProfile }
 export default function Sidebar({ staff }: Props) {
   const pathname = usePathname()
   const router = useRouter()
-  const [apptCount, setApptCount] = useState(0)
-
-  useEffect(() => {
-    async function loadCount() {
-      const supabase = createClient()
-      const { data: { user } } = await supabase.auth.getUser()
-      if (!user) return
-      const { data: profile } = await supabase
-        .from('staff_profiles').select('clinic_id').eq('id', user.id).single()
-      if (!profile) return
-      const now = new Date()
-      const dayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate()).toISOString()
-      const dayEnd   = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59, 999).toISOString()
-      const { count } = await supabase
-        .from('appointments')
-        .select('id', { count: 'exact', head: true })
-        .eq('clinic_id', profile.clinic_id)
-        .in('status', ['scheduled', 'confirmed'])
-        .gte('scheduled_at', dayStart)
-        .lte('scheduled_at', dayEnd)
-      setApptCount(count ?? 0)
-    }
-    loadCount()
-  }, [])
 
   async function handleLogout() {
     const supabase = createClient()
@@ -58,10 +33,10 @@ export default function Sidebar({ staff }: Props) {
 
   const initials = staff.full_name.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase()
 
-  const NAV: { group: string; items: { href: string; icon: any; label: string; badge?: number; exact?: boolean }[] }[] = [
+  const NAV: { group: string; items: { href: string; icon: any; label: string; exact?: boolean }[] }[] = [
     { group: 'Overview', items: [
       { href: '/dashboard',    icon: LayoutDashboard, label: 'Dashboard' },
-      { href: '/appointments', icon: Calendar,        label: 'Appointments', badge: apptCount || undefined },
+      { href: '/appointments', icon: Calendar,        label: 'Appointments' },
       { href: '/patients',     icon: Users,           label: 'Patients' },
       { href: '/clinical',     icon: Stethoscope,     label: 'Clinical Workflow' },
     ]},
@@ -94,7 +69,7 @@ export default function Sidebar({ staff }: Props) {
             <div className="px-5 pt-3 pb-1 text-[10px] font-bold uppercase tracking-[1.2px] text-slate-500">
               {group}
             </div>
-            {items.map(({ href, icon: Icon, label, badge, exact = true }) => (
+            {items.map(({ href, icon: Icon, label, exact = true }) => (
               <Link
                 key={href}
                 href={href}
@@ -107,11 +82,6 @@ export default function Sidebar({ staff }: Props) {
               >
                 <Icon size={16} className="flex-shrink-0" />
                 <span className="flex-1 truncate">{label}</span>
-                {badge !== undefined && badge > 0 && (
-                  <span className="bg-red-500 text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full min-w-[18px] text-center">
-                    {badge}
-                  </span>
-                )}
               </Link>
             ))}
           </div>
