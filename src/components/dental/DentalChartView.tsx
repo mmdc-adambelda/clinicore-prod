@@ -415,7 +415,7 @@ export default function DentalChartView({ patient, chart, history }: {
 function ToothModal({ toothNum, current, patientId, onClose, onSave }: {
   toothNum: number; current?: DentalChart; patientId: string; onClose: () => void; onSave: () => void
 }) {
-  const [status, setStatus]   = useState(current?.status || 'healthy')
+  const [status, setStatus]   = useState<import('@/types').ToothStatus>(current?.status || 'healthy')
   const [notes, setNotes]     = useState(current?.notes || '')
   const [surface, setSurface] = useState(current?.surface_affected || '')
   const [loading, setLoading] = useState(false)
@@ -459,7 +459,7 @@ function ToothModal({ toothNum, current, patientId, onClose, onSave }: {
 
         <div className="mb-3">
           <label className="block text-xs font-semibold text-slate-600 mb-1">Status</label>
-          <select value={status} onChange={e => setStatus(e.target.value)}
+          <select value={status} onChange={e => setStatus(e.target.value as import('@/types').ToothStatus)}
             className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm outline-none focus:border-blue-400">
             {Object.entries(SC).map(([key, cfg]) => (
               <option key={key} value={key}>{cfg.label}</option>
