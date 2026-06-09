@@ -179,20 +179,23 @@ export default function DentalChartView({ patient, chart, history }: {
               <span className="text-[8px] font-bold text-slate-500 uppercase leading-tight w-[68px] text-right pr-2 pt-1 flex-shrink-0">
                 TEMPORARY<br/>TEETH
               </span>
-              <div className="flex items-start gap-1">
+              <div className="w-[277px] flex justify-center">
                 <Arch nums={PUR} chartMap={chartMap} isUpper small onTooth={openTooth} />
-                <div className="w-[2px] self-stretch bg-slate-500 mx-1" />
+              </div>
+              <div className="w-[2px] self-stretch bg-slate-500 mx-1" />
+              <div className="w-[277px] flex justify-center">
                 <Arch nums={PUL} chartMap={chartMap} isUpper small onTooth={openTooth} />
               </div>
             </div>
 
             {/* Status boxes below primary upper */}
-            <div className="flex items-center gap-1 mb-2 pl-[68px]">
-              <div className="flex gap-[3px]">
+            <div className="flex items-center gap-1 mb-2">
+              <span className="w-[68px] flex-shrink-0" />
+              <div className="w-[277px] flex justify-center gap-[3px]">
                 {PUR.map(n => <div key={n} className="w-6 h-3 border border-slate-300 bg-slate-50" />)}
               </div>
               <div className="w-[2px] mx-1" />
-              <div className="flex gap-[3px]">
+              <div className="w-[277px] flex justify-center gap-[3px]">
                 {PUL.map(n => <div key={n} className="w-6 h-3 border border-slate-300 bg-slate-50" />)}
               </div>
             </div>
@@ -223,12 +226,13 @@ export default function DentalChartView({ patient, chart, history }: {
             </div>
 
             {/* Status boxes above primary lower */}
-            <div className="flex items-center gap-1 mt-2 pl-[68px]">
-              <div className="flex gap-[3px]">
+            <div className="flex items-center gap-1 mt-2">
+              <span className="w-[68px] flex-shrink-0" />
+              <div className="w-[277px] flex justify-center gap-[3px]">
                 {PLR.map(n => <div key={n} className="w-6 h-3 border border-slate-300 bg-slate-50" />)}
               </div>
               <div className="w-[2px] mx-1" />
-              <div className="flex gap-[3px]">
+              <div className="w-[277px] flex justify-center gap-[3px]">
                 {PLL.map(n => <div key={n} className="w-6 h-3 border border-slate-300 bg-slate-50" />)}
               </div>
             </div>
@@ -238,9 +242,11 @@ export default function DentalChartView({ patient, chart, history }: {
               <span className="text-[8px] font-bold text-slate-500 uppercase leading-tight w-[68px] text-right pr-2 pt-1 flex-shrink-0">
                 TEMPORARY<br/>TEETH
               </span>
-              <div className="flex items-start gap-1">
+              <div className="w-[277px] flex justify-center">
                 <Arch nums={PLR} chartMap={chartMap} isUpper={false} small onTooth={openTooth} />
-                <div className="w-[2px] self-stretch bg-slate-500 mx-1" />
+              </div>
+              <div className="w-[2px] self-stretch bg-slate-500 mx-1" />
+              <div className="w-[277px] flex justify-center">
                 <Arch nums={PLL} chartMap={chartMap} isUpper={false} small onTooth={openTooth} />
               </div>
             </div>
