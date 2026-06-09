@@ -10,32 +10,39 @@ import {
 import type { StaffProfile } from '@/types'
 import { createClient } from '@/lib/supabase/client'
 import { useRouter } from 'next/navigation'
+import { useState, useEffect } from 'react'
 import toast from 'react-hot-toast'
 import { cn } from '@/lib/utils'
-
-const NAV: { group: string; items: { href: string; icon: any; label: string; badge?: string; exact?: boolean }[] }[] = [
-  { group: 'Overview', items: [
-    { href: '/dashboard',    icon: LayoutDashboard, label: 'Dashboard' },
-    { href: '/appointments', icon: Calendar,         label: 'Appointments', badge: '3' as string | undefined },
-    { href: '/patients',     icon: Users,            label: 'Patients' },
-    { href: '/clinical',     icon: Stethoscope,      label: 'Clinical Workflow' },
-  ]},
-  { group: 'Specialty', items: [
-    { href: '/dental',       icon: Smile,            label: 'Dental Charts' },
-  ]},
-  { group: 'Operations', items: [
-    { href: '/billing',      icon: CreditCard,       label: 'Billing' },
-    { href: '/inventory',    icon: Package,          label: 'Inventory' },
-    { href: '/reports',      icon: BarChart3,        label: 'Reports & KPIs' },
-    { href: '/settings',     icon: Settings,         label: 'Settings / RBAC' },
-  ]},
-]
 
 interface Props { staff: StaffProfile }
 
 export default function Sidebar({ staff }: Props) {
   const pathname = usePathname()
   const router = useRouter()
+  const [apptCount, setApptCount] = useState(0)
+
+  useEffect(() => {
+    async function loadCount() {
+      const supabase = createClient()
+      const { data: { user } } = await supabase.auth.getUser()
+      if (!user) return
+      const { data: profile } = await supabase
+        .from('staff_profiles').select('clinic_id').eq('id', user.id).single()
+      if (!profile) return
+      const now = new Date()
+      const dayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate()).toISOString()
+      const dayEnd   = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59, 999).toISOString()
+      const { count } = await supabase
+        .from('appointments')
+        .select('id', { count: 'exact', head: true })
+        .eq('clinic_id', profile.clinic_id)
+        .in('status', ['scheduled', 'confirmed'])
+        .gte('scheduled_at', dayStart)
+        .lte('scheduled_at', dayEnd)
+      setApptCount(count ?? 0)
+    }
+    loadCount()
+  }, [])
 
   async function handleLogout() {
     const supabase = createClient()
@@ -51,9 +58,26 @@ export default function Sidebar({ staff }: Props) {
 
   const initials = staff.full_name.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase()
 
+  const NAV: { group: string; items: { href: string; icon: any; label: string; badge?: number; exact?: boolean }[] }[] = [
+    { group: 'Overview', items: [
+      { href: '/dashboard',    icon: LayoutDashboard, label: 'Dashboard' },
+      { href: '/appointments', icon: Calendar,        label: 'Appointments', badge: apptCount || undefined },
+      { href: '/patients',     icon: Users,           label: 'Patients' },
+      { href: '/clinical',     icon: Stethoscope,     label: 'Clinical Workflow' },
+    ]},
+    { group: 'Specialty', items: [
+      { href: '/dental',       icon: Smile,           label: 'Dental Charts' },
+    ]},
+    { group: 'Operations', items: [
+      { href: '/billing',      icon: CreditCard,      label: 'Billing' },
+      { href: '/inventory',    icon: Package,         label: 'Inventory' },
+      { href: '/reports',      icon: BarChart3,       label: 'Reports & KPIs' },
+      { href: '/settings',     icon: Settings,        label: 'Settings / RBAC' },
+    ]},
+  ]
+
   return (
     <aside className="w-[220px] flex-shrink-0 bg-slate-900 text-white flex flex-col overflow-hidden">
-      {/* Logo */}
       <div className="h-[60px] flex items-center gap-3 px-5 border-b border-white/8 flex-shrink-0">
         <div className="w-8 h-8 rounded-lg overflow-hidden flex-shrink-0 bg-white">
           <Image src="/logo.png" alt="CliniCore" width={32} height={32} className="w-full h-full object-contain" />
@@ -64,7 +88,6 @@ export default function Sidebar({ staff }: Props) {
         </div>
       </div>
 
-      {/* Navigation */}
       <nav className="flex-1 overflow-y-auto py-3 scrollbar-thin scrollbar-thumb-white/10">
         {NAV.map(({ group, items }) => (
           <div key={group} className="mb-1">
@@ -84,7 +107,7 @@ export default function Sidebar({ staff }: Props) {
               >
                 <Icon size={16} className="flex-shrink-0" />
                 <span className="flex-1 truncate">{label}</span>
-                {badge && (
+                {badge !== undefined && badge > 0 && (
                   <span className="bg-red-500 text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full min-w-[18px] text-center">
                     {badge}
                   </span>
@@ -95,7 +118,6 @@ export default function Sidebar({ staff }: Props) {
         ))}
       </nav>
 
-      {/* User */}
       <div className="p-4 border-t border-white/8 flex-shrink-0 flex items-center gap-2.5">
         <div className="w-8 h-8 rounded-full bg-blue-600 flex items-center justify-center text-xs font-bold flex-shrink-0">
           {initials}
