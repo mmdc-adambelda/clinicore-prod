@@ -28,7 +28,7 @@ export async function middleware(request: NextRequest) {
   const pathname = request.nextUrl.pathname
 
   // Public routes that don't require auth
-  const publicRoutes = ['/login', '/register', '/forgot-password', '/reset-password']
+  const publicRoutes = ['/login', '/register', '/patient-register', '/forgot-password', '/reset-password']
   const isPublicRoute = publicRoutes.some(r => pathname.startsWith(r))
 
   // Redirect unauthenticated users to login
@@ -39,7 +39,9 @@ export async function middleware(request: NextRequest) {
     return NextResponse.redirect(url)
   }
 
-  // Redirect authenticated users away from auth pages
+  // Redirect authenticated users away from auth pages.
+  // We redirect to /dashboard; the dashboard layout will further redirect
+  // patient users to /patient/book if they have no staff_profile.
   if (user && isPublicRoute) {
     const url = request.nextUrl.clone()
     url.pathname = '/dashboard'

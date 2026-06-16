@@ -1,5 +1,5 @@
 'use client'
-import { Bell, Plus, Search, X, CheckCircle, AlertTriangle, Calendar } from 'lucide-react'
+import { Bell, Plus, Search, X, AlertTriangle, Calendar, Menu } from 'lucide-react'
 import { usePathname, useRouter } from 'next/navigation'
 import { useState, useEffect } from 'react'
 import type { StaffProfile } from '@/types'
@@ -43,7 +43,12 @@ function timeAgo(iso: string): string {
   return `${Math.floor(diff / 86400)} days ago`
 }
 
-export default function Topbar({ staff: _staff }: { staff: StaffProfile }) {
+interface Props {
+  staff: StaffProfile
+  onMenuClick?: () => void
+}
+
+export default function Topbar({ staff: _staff, onMenuClick }: Props) {
   const pathname = usePathname()
   const router = useRouter()
   const [search, setSearch] = useState('')
@@ -95,7 +100,6 @@ export default function Topbar({ staff: _staff }: { staff: StaffProfile }) {
       const notifs: Notif[] = []
       let id = 1
 
-      // Inventory alerts
       for (const item of invRes.data || []) {
         const isOut = item.status === 'out_of_stock'
         notifs.push({
@@ -111,7 +115,6 @@ export default function Topbar({ staff: _staff }: { staff: StaffProfile }) {
         })
       }
 
-      // Overdue invoices
       for (const inv of invoiceRes.data || []) {
         notifs.push({
           id: id++,
@@ -124,7 +127,6 @@ export default function Topbar({ staff: _staff }: { staff: StaffProfile }) {
         })
       }
 
-      // Today's appointments
       const todayAppts = (apptRes.data || []).filter(a => a.status === 'scheduled' || a.status === 'confirmed')
       if (todayAppts.length > 0) {
         notifs.push({
@@ -158,14 +160,26 @@ export default function Topbar({ staff: _staff }: { staff: StaffProfile }) {
   })
 
   return (
-    <header className="h-[60px] bg-white border-b border-slate-200 flex items-center gap-3 px-6 flex-shrink-0 relative z-30">
-      <div className="flex-1">
-        <h1 className="text-base font-bold text-slate-900">{getTitle(pathname)}</h1>
-        <p className="text-xs text-slate-400 leading-none mt-0.5">{today}</p>
+    <header className="h-[60px] bg-white border-b border-slate-200 flex items-center gap-2 lg:gap-3 px-3 lg:px-6 flex-shrink-0 relative z-30">
+      {/* Hamburger — mobile only */}
+      <button
+        onClick={onMenuClick}
+        className="lg:hidden w-9 h-9 flex items-center justify-center rounded-lg text-slate-600 hover:bg-slate-100 transition-colors flex-shrink-0"
+        aria-label="Open menu"
+      >
+        <Menu size={20} />
+      </button>
+
+      <div className="flex-1 min-w-0">
+        <h1 className="text-sm lg:text-base font-bold text-slate-900 truncate">{getTitle(pathname)}</h1>
+        <p className="text-xs text-slate-400 leading-none mt-0.5 hidden lg:block">{today}</p>
       </div>
 
-      {/* Search */}
-      <form onSubmit={handleSearch} className="flex items-center gap-2 bg-slate-50 border border-slate-200 rounded-lg px-3 py-1.5 w-60 focus-within:border-blue-400 focus-within:ring-1 focus-within:ring-blue-100 transition-all">
+      {/* Search — hidden on small mobile, visible md+ */}
+      <form
+        onSubmit={handleSearch}
+        className="hidden md:flex items-center gap-2 bg-slate-50 border border-slate-200 rounded-lg px-3 py-1.5 w-44 lg:w-60 focus-within:border-blue-400 focus-within:ring-1 focus-within:ring-blue-100 transition-all"
+      >
         <Search size={14} className="text-slate-400 flex-shrink-0" />
         <input
           value={search}
@@ -189,12 +203,10 @@ export default function Topbar({ staff: _staff }: { staff: StaffProfile }) {
           )}
         </button>
 
-        {/* Dropdown */}
         {showNotifs && (
           <>
             <div className="fixed inset-0 z-40" onClick={() => setShowNotifs(false)} />
-
-            <div className="absolute right-0 top-11 w-80 bg-white border border-slate-200 rounded-xl shadow-xl z-50 overflow-hidden">
+            <div className="absolute right-0 top-11 w-72 lg:w-80 bg-white border border-slate-200 rounded-xl shadow-xl z-50 overflow-hidden">
               <div className="flex items-center justify-between px-4 py-3 border-b border-slate-100">
                 <span className="text-sm font-bold text-slate-800">Notifications</span>
                 <div className="flex items-center gap-2">
@@ -243,13 +255,14 @@ export default function Topbar({ staff: _staff }: { staff: StaffProfile }) {
         )}
       </div>
 
-      {/* New Patient */}
+      {/* New Patient — icon-only on mobile, full button on md+ */}
       <button
         onClick={() => router.push('/patients')}
-        className="flex items-center gap-1.5 bg-blue-600 text-white px-3 py-2 rounded-lg text-sm font-semibold hover:bg-blue-700 transition-colors"
+        className="flex items-center justify-center gap-1.5 bg-blue-600 text-white rounded-lg transition-colors hover:bg-blue-700 w-9 h-9 md:w-auto md:h-auto md:px-3 md:py-2"
+        title="New Patient"
       >
         <Plus size={15} />
-        New Patient
+        <span className="hidden md:inline text-sm font-semibold">New Patient</span>
       </button>
     </header>
   )

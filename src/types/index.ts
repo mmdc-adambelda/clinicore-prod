@@ -5,6 +5,15 @@
 
 export type ClinicType = 'dental'
 export type UserRole = 'admin' | 'dentist' | 'front_desk' | 'receptionist'
+
+// ── PATIENT PORTAL ───────────────────────────────────────────
+export interface PatientPortalProfile {
+  id: string        // auth.users.id
+  patient_id: string
+  clinic_id: string
+  patient: Patient
+  created_at: string
+}
 export type PatientType = 'dental'
 export type AppointmentStatus = 'scheduled' | 'confirmed' | 'in_chair' | 'completed' | 'cancelled' | 'no_show' | 'walk_in'
 export type BookingSource = 'online' | 'phone' | 'walk_in' | 'messenger' | 'follow_up' | 'referral'

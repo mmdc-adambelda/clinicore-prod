@@ -5,7 +5,7 @@ import Image from 'next/image'
 import {
   LayoutDashboard, Calendar, Users, Stethoscope,
   Smile, CreditCard, Package,
-  BarChart3, Settings, LogOut
+  BarChart3, Settings, LogOut, X,
 } from 'lucide-react'
 import type { StaffProfile } from '@/types'
 import { createClient } from '@/lib/supabase/client'
@@ -13,9 +13,13 @@ import { useRouter } from 'next/navigation'
 import toast from 'react-hot-toast'
 import { cn } from '@/lib/utils'
 
-interface Props { staff: StaffProfile }
+interface Props {
+  staff: StaffProfile
+  open?: boolean
+  onClose?: () => void
+}
 
-export default function Sidebar({ staff }: Props) {
+export default function Sidebar({ staff, open = false, onClose }: Props) {
   const pathname = usePathname()
   const router = useRouter()
 
@@ -52,15 +56,31 @@ export default function Sidebar({ staff }: Props) {
   ]
 
   return (
-    <aside className="w-[220px] flex-shrink-0 bg-slate-900 text-white flex flex-col overflow-hidden">
+    <aside className={cn(
+      'bg-slate-900 text-white flex flex-col overflow-hidden flex-shrink-0',
+      // Mobile: fixed overlay drawer
+      'fixed inset-y-0 left-0 z-50 w-[280px]',
+      // Desktop: static in flex layout, narrower
+      'lg:relative lg:inset-auto lg:w-[220px] lg:translate-x-0',
+      // Slide animation
+      'transition-transform duration-300 ease-in-out',
+      open ? 'translate-x-0' : '-translate-x-full lg:translate-x-0',
+    )}>
       <div className="h-[60px] flex items-center gap-3 px-5 border-b border-white/8 flex-shrink-0">
         <div className="w-8 h-8 rounded-lg overflow-hidden flex-shrink-0 bg-white">
           <Image src="/logo.png" alt="CliniCore" width={32} height={32} className="w-full h-full object-contain" />
         </div>
-        <div>
+        <div className="flex-1">
           <div className="text-[15px] font-bold leading-none">CliniCore</div>
           <div className="text-[10px] text-slate-500 mt-0.5 tracking-wide">EMR v2.0</div>
         </div>
+        {/* Close button — mobile only */}
+        <button
+          onClick={onClose}
+          className="lg:hidden w-7 h-7 flex items-center justify-center rounded-md text-slate-400 hover:text-white hover:bg-white/10 transition-colors"
+        >
+          <X size={16} />
+        </button>
       </div>
 
       <nav className="flex-1 overflow-y-auto py-3 scrollbar-thin scrollbar-thumb-white/10">
@@ -73,6 +93,7 @@ export default function Sidebar({ staff }: Props) {
               <Link
                 key={href}
                 href={href}
+                onClick={onClose}
                 className={cn(
                   'flex items-center gap-2.5 px-5 py-2.5 text-[13.5px] font-medium transition-all duration-150 border-l-[3px]',
                   isActive(href, exact)

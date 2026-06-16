@@ -4,7 +4,7 @@ import { createClient } from '@/lib/supabase/server'
 import type {
   Patient, Appointment, ClinicalVisit, DentalChart,
   InventoryItem, Invoice, Payment, AuditLog,
-  DashboardStats, StaffProfile,
+  DashboardStats, StaffProfile, PatientPortalProfile,
 } from '@/types'
 
 // ── AUDIT ────────────────────────────────────────────────────
@@ -38,6 +38,27 @@ export async function logAudit(
 }
 
 // ── CURRENT USER ─────────────────────────────────────────────
+export async function getCurrentPatient(): Promise<PatientPortalProfile | null> {
+  const supabase = createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return null
+
+  const { data } = await supabase
+    .from('patient_profiles')
+    .select('id, patient_id, clinic_id, created_at, patient:patients(*)')
+    .eq('id', user.id)
+    .single()
+
+  if (!data) return null
+  return {
+    id: data.id,
+    patient_id: data.patient_id,
+    clinic_id: data.clinic_id,
+    created_at: data.created_at,
+    patient: data.patient as unknown as Patient,
+  }
+}
+
 export async function getCurrentStaff(): Promise<StaffProfile | null> {
   const supabase = createClient()
   const { data: { user } } = await supabase.auth.getUser()

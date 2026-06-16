@@ -16,15 +16,34 @@ export default function LoginForm() {
     e.preventDefault()
     setLoading(true)
     const supabase = createClient()
-    const { error } = await supabase.auth.signInWithPassword({ email, password })
+    const { error, data } = await supabase.auth.signInWithPassword({ email, password })
     if (error) {
       toast.error(error.message)
       setLoading(false)
-    } else {
-      toast.success('Signed in')
-      router.push('/dashboard')
-      router.refresh()
+      return
     }
+
+    // Role-based redirect: staff → /dashboard, patient → /patient/book
+    const userId = data.user.id
+    const { data: staffRow } = await supabase
+      .from('staff_profiles')
+      .select('id')
+      .eq('id', userId)
+      .maybeSingle()
+
+    if (staffRow) {
+      toast.success('Welcome back!')
+      router.push('/dashboard')
+    } else {
+      const { data: patientRow } = await supabase
+        .from('patient_profiles')
+        .select('id')
+        .eq('id', userId)
+        .maybeSingle()
+      toast.success('Welcome back!')
+      router.push(patientRow ? '/patient/book' : '/dashboard')
+    }
+    router.refresh()
   }
 
   return (
@@ -68,6 +87,10 @@ export default function LoginForm() {
       <p className="text-center text-sm text-slate-500 mt-6">
         New clinic?{' '}
         <Link href="/register" className="text-blue-400 hover:text-blue-300">Create account</Link>
+      </p>
+      <p className="text-center text-sm text-slate-500 mt-1.5">
+        New patient?{' '}
+        <Link href="/patient-register" className="text-blue-400 hover:text-blue-300">Sign up</Link>
       </p>
     </div>
   )
