@@ -49,7 +49,7 @@ export async function getCurrentPatient(): Promise<PatientPortalProfile | null> 
     .eq('id', user.id)
     .single()
 
-  if (!data) return null
+  if (!data || !data.patient) return null
   return {
     id: data.id,
     patient_id: data.patient_id,
