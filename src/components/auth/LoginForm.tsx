@@ -15,35 +15,41 @@ export default function LoginForm() {
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
     setLoading(true)
-    const supabase = createClient()
-    const { error, data } = await supabase.auth.signInWithPassword({ email, password })
-    if (error) {
-      toast.error(error.message)
-      setLoading(false)
-      return
-    }
+    try {
+      const supabase = createClient()
+      const { error, data } = await supabase.auth.signInWithPassword({ email, password })
+      if (error || !data?.user) {
+        toast.error(error?.message || 'Sign in failed')
+        return
+      }
 
-    // Role-based redirect: staff → /dashboard, patient → /patient/book
-    const userId = data.user.id
-    const { data: staffRow } = await supabase
-      .from('staff_profiles')
-      .select('id')
-      .eq('id', userId)
-      .maybeSingle()
-
-    if (staffRow) {
-      toast.success('Welcome back!')
-      router.push('/dashboard')
-    } else {
-      const { data: patientRow } = await supabase
-        .from('patient_profiles')
+      // Role-based redirect: staff → /dashboard, patient → /patient/book
+      const userId = data.user.id
+      const { data: staffRow } = await supabase
+        .from('staff_profiles')
         .select('id')
         .eq('id', userId)
         .maybeSingle()
-      toast.success('Welcome back!')
-      router.push(patientRow ? '/patient/book' : '/dashboard')
+
+      if (staffRow) {
+        toast.success('Welcome back!')
+        router.push('/dashboard')
+      } else {
+        const { data: patientRow } = await supabase
+          .from('patient_profiles')
+          .select('id')
+          .eq('id', userId)
+          .maybeSingle()
+        toast.success('Welcome back!')
+        router.push(patientRow ? '/patient/book' : '/dashboard')
+      }
+      router.refresh()
+    } catch (err) {
+      console.error('[login]', err)
+      toast.error(err instanceof Error ? err.message : 'Something went wrong. Please try again.')
+    } finally {
+      setLoading(false)
     }
-    router.refresh()
   }
 
   return (
