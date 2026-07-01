@@ -66,10 +66,12 @@ export interface Patient {
   last_name: string
   full_name: string           // generated column
   date_of_birth: string | null
+  age: number | null
   sex: Sex | null
   contact_number: string | null
   email: string | null
   address: string | null
+  treatment: string | null
   allergies: string | null
   medical_history: string | null
   emergency_contact: string | null

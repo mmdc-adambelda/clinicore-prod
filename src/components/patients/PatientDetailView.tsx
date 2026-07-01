@@ -26,12 +26,16 @@ export default function PatientDetailView({ patient }: { patient: Patient & { cl
           </div>
           <div className="flex gap-4 mt-1 flex-wrap text-sm text-slate-500">
             <span>ID: {patient.id}</span>
+            {patient.age != null && <span>Age: {patient.age}</span>}
             {patient.date_of_birth && <span>DOB: {formatDate(patient.date_of_birth)}</span>}
             {patient.sex && <span className="capitalize">{patient.sex}</span>}
             {patient.contact_number && <span>📱 {patient.contact_number}</span>}
             {patient.email && <span>✉️ {patient.email}</span>}
           </div>
-          {patient.allergies && <div className="mt-1 text-xs font-semibold text-red-600 bg-red-50 px-2 py-0.5 rounded inline-block">⚠️ Allergies: {patient.allergies}</div>}
+          <div className="flex flex-wrap gap-2 mt-1">
+            {patient.treatment && <div className="text-xs font-semibold text-blue-700 bg-blue-50 px-2 py-0.5 rounded inline-block">🦷 {patient.treatment}</div>}
+            {patient.allergies && <div className="text-xs font-semibold text-red-600 bg-red-50 px-2 py-0.5 rounded inline-block">⚠️ Allergies: {patient.allergies}</div>}
+          </div>
         </div>
         <div className="flex gap-2 flex-shrink-0">
           <button onClick={() => router.push(`/dental/${patient.id}`)}

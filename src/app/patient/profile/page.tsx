@@ -8,13 +8,14 @@ export default async function PatientProfilePage() {
   const p = profile.patient
   const fields = [
     { label: 'Full Name',         value: p.full_name },
-    { label: 'Date of Birth',     value: p.date_of_birth ?? '—' },
+    { label: 'Age',               value: p.age != null ? String(p.age) : '—' },
     { label: 'Sex',               value: p.sex ? p.sex.charAt(0).toUpperCase() + p.sex.slice(1) : '—' },
     { label: 'Contact Number',    value: p.contact_number ?? '—' },
-    { label: 'Email',             value: p.email ?? '—' },
-    { label: 'Address',           value: p.address ?? '—' },
+    { label: 'Treatment',         value: p.treatment ?? '—' },
     { label: 'Allergies',         value: p.allergies ?? '—' },
     { label: 'Medical History',   value: p.medical_history ?? '—' },
+    { label: 'Date of Birth',     value: p.date_of_birth ?? '—' },
+    { label: 'Email',             value: p.email ?? '—' },
     { label: 'Emergency Contact', value: p.emergency_contact ?? '—' },
     { label: 'Emergency Phone',   value: p.emergency_phone ?? '—' },
   ]

@@ -210,11 +210,12 @@ export async function getDashboardStats(): Promise<DashboardStats & {
 // ── PATIENTS ──────────────────────────────────────────────────
 export async function getPatients(opts: {
   search?: string
+  treatment?: string
   page?: number
   perPage?: number
 } = {}) {
   const supabase = createClient()
-  const { search, page = 1, perPage = 25 } = opts
+  const { search, treatment, page = 1, perPage = 25 } = opts
   const from = (page - 1) * perPage
   const to = from + perPage - 1
 
@@ -226,6 +227,7 @@ export async function getPatients(opts: {
     .range(from, to)
 
   if (search) query = query.textSearch('full_name', search, { type: 'websearch' })
+  if (treatment) query = query.ilike('treatment', `%${treatment}%`)
 
   const { data, error, count } = await query
   return { data: data ?? [], count: count ?? 0, error }
